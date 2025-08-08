@@ -10,6 +10,7 @@ on:
 
 jobs:
   test:
+    name: ServicesTest
     runs-on: ubuntu-latest
 
     steps:
