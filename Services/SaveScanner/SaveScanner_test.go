@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -14,7 +16,19 @@ func logTestFailure(errMsg string, result string, expected string) string {
 	return fmt.Sprintf("\n\n-- Error message: %s\n\n\tRESULT: %s\n\n\tEXPECTED: %s\n\n", errMsg, result, expected)
 }
 
+func slicesEqualIgnoreOrder(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	aCopy := append([]string(nil), a...)
+	bCopy := append([]string(nil), b...)
+	sort.Strings(aCopy)
+	sort.Strings(bCopy)
+	return reflect.DeepEqual(aCopy, bCopy)
+}
+
 func TestSeek(t *testing.T) {
+	//TODO: test for filtering (ignore specific directories)
 
 	tmpDir := t.TempDir()
 
@@ -68,21 +82,21 @@ func TestSeek(t *testing.T) {
 			name:      "Test 2 - Finding files in dirWithFiles2",
 			directory: "dirWithFiles2",
 			expected: []string{
-				filepath.Join("dirWithFiles2", "image.png"),
-				filepath.Join("dirWithFiles2", "script.sh"),
-				filepath.Join("dirWithFiles2", "data.json"),
+				filepath.Join("dirWithFiles2/subdir", "data.json"),
+				filepath.Join("dirWithFiles2/subdir", "image.png"),
+				filepath.Join("dirWithFiles2/subdir", "script.sh"),
 			},
 		},
 		{
 			name:      "Test 3 - Finding files in root directory \"tmpDir\"",
-			directory: "dirWithFiles2",
+			directory: ".",
 			expected: []string{
-				filepath.Join("tmpDir", "dirWithFiles1", "file1.txt"),
-				filepath.Join("tmpDir", "dirWithFiles1", "file2.go"),
-				filepath.Join("tmpDir", "dirWithFiles1", "file3.md"),
-				filepath.Join("tmpDir", "dirWithFiles2", "image.png"),
-				filepath.Join("tmpDir", "dirWithFiles2", "script.sh"),
-				filepath.Join("tmpDir", "dirWithFiles2", "data.json"),
+				filepath.Join("dirWithFiles1", "file1.txt"),
+				filepath.Join("dirWithFiles1", "file2.go"),
+				filepath.Join("dirWithFiles1", "file3.md"),
+				filepath.Join("dirWithFiles2/subdir", "data.json"),
+				filepath.Join("dirWithFiles2/subdir", "image.png"),
+				filepath.Join("dirWithFiles2/subdir", "script.sh"),
 			},
 		},
 		{
@@ -93,11 +107,18 @@ func TestSeek(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		path, err := os.Getwd()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
 		t.Run(tc.name, func(t *testing.T) {
 
+			os.Chdir(tmpDir)
 			result := seek(tc.directory)
 
-			if !(reflect.DeepEqual(result, tc.expected)) {
+			if !(slicesEqualIgnoreOrder(result, tc.expected)) {
 				t.Error(
 					logTestFailure(
 						fmt.Sprintf("When seeking for files in directory, %s, an error ocurred\n", tc.directory),
@@ -108,6 +129,7 @@ func TestSeek(t *testing.T) {
 			}
 
 		})
+		os.Chdir(path) // this is here so golang can remove tmp data
 	}
 
 }
