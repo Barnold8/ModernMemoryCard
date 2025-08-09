@@ -1,7 +1,10 @@
 package main
 
-import "fmt"
-
 func main() {
-	fmt.Println("hello world")
+	// dir := "../."
+
+}
+
+func seek(directory string) []string {
+	return []string{}
 }
